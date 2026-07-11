@@ -15,8 +15,8 @@ const ALLOWED_ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID);
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 // Конфиг твоего репозитория
-const GH_USER = "ТВОЙ_ГИТХАБ_НИК"; 
-const GH_REPO = "ИМЯ_РЕПОЗИТОРИЯ";
+const GH_USER = "gretg311-design"; 
+const GH_REPO = "gretg311-design/Red-Alert";
 
 let db, playersCollection;
 
