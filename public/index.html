@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Alert Console</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { background: #111; color: #fff; font-family: monospace; padding: 15px; }
+        h1 { color: #ff3333; text-align: center; border-bottom: 2px solid #ff3333; padding-bottom: 10px; }
+        .block { background: #1a1a1a; padding: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        input, select, button { width: 100%; box-sizing: border-box; padding: 10px; background: #000; border: 1px solid #555; color: #fff; font-family: monospace; margin-top: 5px; }
+        input:focus, select:focus { border-color: #ff3333; outline: none; }
+        button { background: #ff3333; font-weight: bold; cursor: pointer; border: none; margin-top: 10px; }
+        button:active { background: #b30000; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        #info { font-size: 14px; line-height: 1.6; color: #ccc; }
+    </style>
+</head>
+<body>
 
+    <h1>[ СУПЕР-АДМИНКА RED ALERT ]</h1>
+
+    <!-- Поиск по БД -->
+    <div class="block">
+        <input type="number" id="userIdInput" placeholder="Введите Telegram ID игрока">
+        <button onclick="loadFromDb()">НАЙТИ В БАЗЕ</button>
+    </div>
+
+    <!-- Инфо из Монги -->
+    <div class="block" id="playerBlock" style="display:none;">
+        <h3>Статус объекта в БД:</h3>
+        <div id="info"></div>
+    </div>
+
+    <!-- Панель управления -->
+    <div class="block" id="controlsBlock" style="display:none;">
+        <h3>Консоль модификации</h3>
+        
+        <div class="grid">
+            <div>
+                <input type="number" id="coinCount" placeholder="Кол-во монет (н-р: 2000 или -500)">
+                <button onclick="changeCoins()">Изменить монеты</button>
+            </div>
+            <div>
+                <select id="gitCardsSelect"><option>Загрузка карт...</option></select>
+                <button onclick="giveCard()">Выдать карту</button>
+            </div>
+        </div>
+
+        <div class="grid" style="margin-top: 15px;">
+            <button onclick="removeDrone()">Снять Дрона</button>
+            <button onclick="resetCd()">Сбросить КД</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const initData = tg.initData;
+        let activeId = null;
+
+        // Загрузка карт с Гитхаба сразу при открытии аппки
+        async function loadGitCards() {
+            try {
+                const res = await fetch('/api/git-cards', { headers: { 'x-tg-init-data': initData } });
+                const cards = await res.json();
+                const select = document.getElementById('gitCardsSelect');
+                select.innerHTML = '';
+                cards.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c; opt.innerText = c;
+                    select.appendChild(opt);
+                });
+            } catch(e) { alert('Ошибка загрузки списка карт с GitHub'); }
+        }
+
+        async function loadFromDb() {
+            activeId = document.getElementById('userIdInput').value.trim();
+            if(!activeId) return;
+
+            const res = await fetch(`/api/player/${activeId}`, { headers: { 'x-tg-init-data': initData } });
+            if(!res.ok) return alert('Игрок не найден в MongoDB');
+            const data = await res.json();
+
+            document.getElementById('info').innerHTML = `
+                <b>ID:</b> ${data.userId}<br>
+                <b>Монеты:</b> ${data.coins}<br>
+                <b>Дрон:</b> ${data.droneActive ? 'АКТИВЕН' : 'НЕТ'}<br>
+                <b>Карты:</b> ${data.cards ? data.cards.join(', ') : 'нет'}<br>
+                <b>Кулдауны:</b> ${JSON.stringify(data.cooldowns || {})}
+            `;
+            document.getElementById('playerBlock').style.display = 'block';
+            document.getElementById('controlsBlock').style.display = 'block';
+        }
+
+        async function makePost(url, body = {}) {
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-tg-init-data': initData },
+                body: JSON.stringify(body)
+            });
+            loadFromDb(); // Сразу перечитываем из Монги свежие данные
+        }
+
+        function changeCoins() { makePost(`/api/player/${activeId}/coins`, { amount: document.getElementById('coinCount').value }); }
+        function giveCard() { makePost(`/api/player/${activeId}/give-card`, { cardCode: document.getElementById('gitCardsSelect').value }); }
+        function removeDrone() { makePost(`/api/player/${activeId}/remove-drone`); }
+        function resetCd() { makePost(`/api/player/${activeId}/reset-cooldowns`); }
+
+        loadGitCards();
+    </script>
+</body>
+</html>
