@@ -1,1 +1,17 @@
-
+{
+  "name": "red-alert-admin-app",
+  "version": "1.0.0",
+  "description": "Админ-панель для Telegram-бота Red Alert",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "express": "^4.19.0",
+    "mongodb": "^6.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
